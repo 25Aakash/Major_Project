@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import { learningAPI, interactionAPI } from '../services/api';
-import { FaTrophy, FaStar, FaBook, FaChartLine, FaBrain } from 'react-icons/fa';
+import { FaTrophy, FaStar, FaBook, FaChartLine, FaBrain, FaMicrophone } from 'react-icons/fa';
+import VoiceAssessment from '../components/VoiceAssessment';
 
 const Dashboard = () => {
   const { user, isAuthenticated } = useUser();
@@ -10,6 +11,7 @@ const Dashboard = () => {
   const [recommendations, setRecommendations] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isAssessmentOpen, setIsAssessmentOpen] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -88,6 +90,30 @@ const Dashboard = () => {
           />
         </div>
 
+        {/* Weekly Assessment Card */}
+        <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg shadow-lg p-6 mb-8 hover:shadow-xl transition">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <FaMicrophone className="text-4xl" />
+                <h2 className="text-2xl font-bold">Weekly Voice Assessment</h2>
+              </div>
+              <p className="text-purple-100 mb-4">
+                Take your personalized voice-based assessment to help us understand your learning needs better.
+              </p>
+              <button
+                onClick={() => setIsAssessmentOpen(true)}
+                className="px-6 py-3 bg-white text-purple-600 rounded-lg font-bold hover:bg-purple-50 transition shadow-md"
+              >
+                🎤 Start Assessment
+              </button>
+            </div>
+            <div className="hidden md:block text-8xl opacity-20">
+              🎯
+            </div>
+          </div>
+        </div>
+
         {/* Learning Profile */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
           <h2 className="text-2xl font-bold mb-4">Your Learning Profile</h2>
@@ -133,6 +159,13 @@ const Dashboard = () => {
             </div>
           )}
         </div>
+
+        {/* Voice Assessment Modal */}
+        <VoiceAssessment
+          isOpen={isAssessmentOpen}
+          onClose={() => setIsAssessmentOpen(false)}
+          userProfile={user?.neurodiversityType?.[0] || 'general'}
+        />
       </div>
     </div>
   );

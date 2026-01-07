@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import { contentAPI, learningAPI, interactionAPI } from '../services/api';
-import { FaBook, FaFilter, FaPlay } from 'react-icons/fa';
+import { FaBook, FaFilter, FaPlay, FaVideo } from 'react-icons/fa';
+import VideoPlayer from '../components/VideoPlayer';
 
 const Learning = () => {
   const { user, isAuthenticated } = useUser();
@@ -11,6 +12,7 @@ const Learning = () => {
   const [adaptivePath, setAdaptivePath] = useState(null);
   const [filters, setFilters] = useState({ subject: '', difficulty: '' });
   const [loading, setLoading] = useState(true);
+  const [isVideoOpen, setIsVideoOpen] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -155,29 +157,76 @@ const Learning = () => {
         {/* Content Grid */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-2xl font-bold mb-6">Available Content</h2>
-          {content.length > 0 ? (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {content.map(item => (
-                <LearningCard
-                  key={item._id}
-                  content={item}
-                  onStart={() => handleStartLesson(item._id)}
-                  onComplete={() => handleComplete(item._id)}
-                  isCompleted={user?.completedLessons?.includes(item._id)}
-                />
-              ))}
-            </div>
-          ) : (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Video Card */}
+            <VideoCard onClick={() => setIsVideoOpen(true)} />
+            
+            {/* Learning Content Cards */}
+            {content.map(item => (
+              <LearningCard
+                key={item._id}
+                content={item}
+                onStart={() => handleStartLesson(item._id)}
+                onComplete={() => handleComplete(item._id)}
+                isCompleted={user?.completedLessons?.includes(item._id)}
+              />
+            ))}
+          </div>
+          
+          {content.length === 0 && (
             <div className="text-center py-8">
               <FaBook className="mx-auto text-6xl text-gray-300 mb-4" />
               <p className="text-gray-600">No content found. Try adjusting your filters.</p>
             </div>
           )}
         </div>
+
+        {/* Video Player Modal */}
+        <VideoPlayer
+          isOpen={isVideoOpen}
+          onClose={() => setIsVideoOpen(false)}
+          videoSrc="/demo-video.mp4"
+          title="Learning Content Demo Video"
+        />
       </div>
     </div>
   );
 };
+
+const VideoCard = ({ onClick }) => (
+  <div 
+    className="border-2 border-red-500 rounded-lg overflow-hidden hover:shadow-xl transition cursor-pointer group"
+    onClick={onClick}
+  >
+    {/* Video Thumbnail */}
+    <div className="relative bg-black aspect-video">
+      <video 
+        src="/demo-video.mp4"
+        className="w-full h-full object-cover"
+        muted
+      />
+      <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center group-hover:bg-opacity-30 transition">
+        <div className="bg-red-600 rounded-full p-4 group-hover:scale-110 transition">
+          <FaPlay className="text-white text-2xl ml-1" />
+        </div>
+      </div>
+      <div className="absolute bottom-2 right-2 bg-black bg-opacity-80 px-2 py-1 rounded text-white text-xs">
+        5:30
+      </div>
+    </div>
+    
+    {/* Video Info */}
+    <div className="p-4">
+      <h3 className="font-bold text-lg text-gray-900 mb-2 line-clamp-2">
+        Learning Content Demo Video
+      </h3>
+      <div className="flex items-center text-gray-600 text-sm">
+        <FaVideo className="mr-2" />
+        <span>Demo Content</span>
+      </div>
+    </div>
+  </div>
+);
 
 const LearningCard = ({ content, onStart, onComplete, isCompleted }) => (
   <div className="border rounded-lg p-6 hover:shadow-lg transition">

@@ -58,3 +58,5 @@ ml-module/data/*.json
 # OS
 Thumbs.db
 .DS_Store
+WhatsApp Video*.mp4
+*.mp4
