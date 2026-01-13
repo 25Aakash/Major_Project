@@ -31,6 +31,8 @@ export const contentAPI = {
   getAll: (params) => api.get('/content', { params }),
   getById: (id) => api.get(`/content/${id}`),
   create: (data) => api.post('/content', data),
+  update: (id, data) => api.put(`/content/${id}`, data),
+  delete: (id) => api.delete(`/content/${id}`),
   getSubjects: () => api.get('/content/subjects/list'),
 };
 

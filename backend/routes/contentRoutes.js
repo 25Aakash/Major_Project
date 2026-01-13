@@ -80,4 +80,51 @@ router.get('/subjects/list', async (req, res) => {
   }
 });
 
+// @route   PUT /api/content/:id
+// @desc    Update content
+// @access  Public (should be admin/teacher only)
+router.put('/:id', async (req, res) => {
+  try {
+    const content = await Content.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    );
+
+    if (!content) {
+      return res.status(404).json({ message: 'Content not found' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Content updated successfully',
+      content
+    });
+  } catch (error) {
+    console.error('Update content error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// @route   DELETE /api/content/:id
+// @desc    Delete content
+// @access  Public (should be admin only)
+router.delete('/:id', async (req, res) => {
+  try {
+    const content = await Content.findByIdAndDelete(req.params.id);
+
+    if (!content) {
+      return res.status(404).json({ message: 'Content not found' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Content deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete content error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 module.exports = router;

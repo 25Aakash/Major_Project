@@ -4,6 +4,9 @@ import { useUser } from '../context/UserContext';
 import { contentAPI, learningAPI, interactionAPI } from '../services/api';
 import { FaBook, FaFilter, FaPlay, FaVideo } from 'react-icons/fa';
 import VideoPlayer from '../components/VideoPlayer';
+import LessonViewer from '../components/LessonViewer';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const Learning = () => {
   const { user, isAuthenticated } = useUser();
@@ -13,6 +16,8 @@ const Learning = () => {
   const [filters, setFilters] = useState({ subject: '', difficulty: '' });
   const [loading, setLoading] = useState(true);
   const [isVideoOpen, setIsVideoOpen] = useState(false);
+  const [selectedLesson, setSelectedLesson] = useState(null);
+  const [isLessonOpen, setIsLessonOpen] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -40,6 +45,10 @@ const Learning = () => {
 
   const handleStartLesson = async (contentId) => {
     try {
+      const lesson = content.find(c => c._id === contentId);
+      setSelectedLesson(lesson);
+      setIsLessonOpen(true);
+
       // Log interaction
       await interactionAPI.log({
         userId: user.id,
@@ -48,33 +57,37 @@ const Learning = () => {
         interactionType: 'view',
         timestamp: new Date()
       });
-
-      // Navigate to lesson (you can create a detailed lesson page)
-      alert('Lesson started! (Detailed lesson view coming soon)');
     } catch (error) {
       console.error('Error starting lesson:', error);
     }
   };
 
-  const handleComplete = async (contentId) => {
+  const handleComplete = async (score) => {
+    if (!selectedLesson) return;
+
     try {
-      await learningAPI.markComplete(user.id, contentId);
+      await learningAPI.markComplete(user.id, selectedLesson._id);
       
       // Log completion
       await interactionAPI.log({
         userId: user.id,
         sessionId: Date.now().toString(),
-        contentId,
+        contentId: selectedLesson._id,
         interactionType: 'complete',
         completionRate: 100,
-        performance: { score: 100, attempts: 1, hints: 0, timeSpent: 0 },
+        performance: { score: score, attempts: 1, hints: 0, timeSpent: 0 },
         timestamp: new Date()
       });
 
-      alert('Lesson completed! Points added to your account.');
+      toast.success(`🎉 Lesson completed! You earned ${selectedLesson.points} points!`, {
+        position: 'top-center',
+        autoClose: 3000
+      });
+
       fetchLearningData(); // Refresh data
     } catch (error) {
       console.error('Error marking complete:', error);
+      toast.error('Failed to save progress. Please try again.');
     }
   };
 
@@ -181,11 +194,26 @@ const Learning = () => {
           )}
         </div>
 
+        {/* Lesson Viewer Modal */}
+        <LessonViewer
+          isOpen={isLessonOpen}
+          onClose={() => {
+            setIsLessonOpen(false);
+            setSelectedLesson(null);
+          }}
+          content={selectedLesson}
+          onComplete={handleComplete}
+          userId={user?.id}
+        />
+
+        {/* Toast Container */}
+        <ToastContainer />
+
         {/* Video Player Modal */}
         <VideoPlayer
           isOpen={isVideoOpen}
           onClose={() => setIsVideoOpen(false)}
-          videoSrc="/demo-video.mp4"
+          videoSrc="/public/demo-video.mp4"
           title="Learning Content Demo Video"
         />
       </div>
