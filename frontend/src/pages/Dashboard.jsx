@@ -2,11 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import { learningAPI, interactionAPI } from '../services/api';
-import { FaTrophy, FaStar, FaBook, FaChartLine, FaBrain, FaMicrophone, FaDownload } from 'react-icons/fa';
+import { FaTrophy, FaStar, FaBook, FaChartLine, FaBrain, FaMicrophone, FaDownload, FaBolt, FaClock, FaFire } from 'react-icons/fa';
 import VoiceAssessment from '../components/VoiceAssessment';
 import AnalyticsDashboard from '../components/AnalyticsDashboard';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import axios from 'axios';
 
 const Dashboard = () => {
   const { user, isAuthenticated } = useUser();
@@ -15,6 +16,11 @@ const Dashboard = () => {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAssessmentOpen, setIsAssessmentOpen] = useState(false);
+  
+  // AI Adaptive Features (Feature #6, #11, #12)
+  const [performancePrediction, setPerformancePrediction] = useState(null);
+  const [personalizedTips, setPersonalizedTips] = useState([]);
+  const [skillMastery, setSkillMastery] = useState([]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -34,10 +40,45 @@ const Dashboard = () => {
 
       setRecommendations(recRes.data.recommendations || []);
       setAnalytics(analyticsRes.data);
+      
+      // Fetch AI predictions (Feature #6, #11, #12)
+      await fetchAIPredictions();
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+  
+  // Fetch AI predictions and insights
+  const fetchAIPredictions = async () => {
+    try {
+      // Get interaction history
+      const historyRes = await interactionAPI.getHistory(user.id);
+      const interactionHistory = historyRes.data?.interactions || [];
+      
+      // Get performance prediction - wrapped in try-catch to handle ML API being down
+      try {
+        const predictionRes = await axios.post('http://localhost:5001/api/ml/predict-performance', {
+          userId: user.id,
+          interactionHistory
+        });
+        setPerformancePrediction(predictionRes.data);
+      } catch (err) {
+        console.log('ML prediction not available yet - ML API might not be running');
+      }
+      
+      // Get personalized tips - wrapped in try-catch
+      try {
+        const tipsRes = await axios.get(`http://localhost:5000/api/interventions/personalized-tips/${user.id}`);
+        setPersonalizedTips(tipsRes.data.tips || []);
+      } catch (err) {
+        console.log('Personalized tips not available yet');
+      }
+      
+    } catch (error) {
+      console.error('Error fetching AI predictions:', error);
+      // Don't throw error - allow dashboard to load without predictions
     }
   };
 
@@ -205,6 +246,92 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
+        
+        {/* AI Performance Prediction (Feature #6) */}
+        {performancePrediction && (
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg shadow-md p-6 mb-8 border-l-4 border-blue-500">
+            <div className="flex items-center mb-4">
+              <FaBolt className="text-3xl text-blue-600 mr-3" />
+              <h2 className="text-2xl font-bold text-gray-900">AI Performance Prediction</h2>
+            </div>
+            <div className="grid md:grid-cols-3 gap-6 mb-4">
+              <div className="text-center p-4 bg-white rounded-lg">
+                <div className="text-3xl font-bold text-blue-600">{performancePrediction.predictedScore}%</div>
+                <div className="text-sm text-gray-600 mt-1">Predicted Next Score</div>
+              </div>
+              <div className="text-center p-4 bg-white rounded-lg">
+                <div className="text-3xl font-bold text-purple-600 capitalize">{performancePrediction.trend}</div>
+                <div className="text-sm text-gray-600 mt-1">Performance Trend</div>
+              </div>
+              <div className="text-center p-4 bg-white rounded-lg">
+                <div className="text-3xl font-bold text-green-600">{performancePrediction.improvementRate}%</div>
+                <div className="text-sm text-gray-600 mt-1">Improvement Rate</div>
+              </div>
+            </div>
+            {performancePrediction.recommendations && performancePrediction.recommendations.length > 0 && (
+              <div className="mt-4">
+                <h3 className="font-semibold text-gray-700 mb-2">AI Recommendations:</h3>
+                <ul className="space-y-2">
+                  {performancePrediction.recommendations.map((rec, idx) => (
+                    <li key={idx} className="flex items-start text-gray-700">
+                      <FaBolt className="text-yellow-500 mr-2 mt-1 flex-shrink-0" />
+                      {rec}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+        
+        {/* Personalized Learning Tips (Feature #5, #7, #12) */}
+        {personalizedTips && personalizedTips.length > 0 && (
+          <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+            <div className="flex items-center mb-4">
+              <FaClock className="text-3xl text-purple-600 mr-3" />
+              <h2 className="text-2xl font-bold text-gray-900">Your Personalized Learning Tips</h2>
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              {personalizedTips.map((tip, idx) => (
+                <div key={idx} className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border-l-4 border-purple-500">
+                  <div className="flex items-center mb-2">
+                    <span className="text-2xl mr-2">{tip.icon}</span>
+                    <h3 className="font-bold text-gray-900">{tip.message}</h3>
+                  </div>
+                  <p className="text-sm text-gray-600">{tip.action}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {/* Learning Rhythm Insights (Feature #5) */}
+        {user?.learningRhythm && (
+          <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+            <div className="flex items-center mb-4">
+              <FaFire className="text-3xl text-orange-600 mr-3" />
+              <h2 className="text-2xl font-bold text-gray-900">Your Learning Rhythm</h2>
+            </div>
+            <div className="grid md:grid-cols-4 gap-4">
+              <div className="text-center p-4 bg-orange-50 rounded-lg">
+                <div className="text-2xl font-bold text-orange-600">{user.learningRhythm.optimalStudyDuration} min</div>
+                <div className="text-xs text-gray-600 mt-1">Optimal Session</div>
+              </div>
+              <div className="text-center p-4 bg-blue-50 rounded-lg">
+                <div className="text-2xl font-bold text-blue-600 capitalize">{user.learningRhythm.bestTimeOfDay}</div>
+                <div className="text-xs text-gray-600 mt-1">Best Time</div>
+              </div>
+              <div className="text-center p-4 bg-green-50 rounded-lg">
+                <div className="text-2xl font-bold text-green-600">{user.learningRhythm.averageAttentionSpan} min</div>
+                <div className="text-xs text-gray-600 mt-1">Attention Span</div>
+              </div>
+              <div className="text-center p-4 bg-purple-50 rounded-lg">
+                <div className="text-2xl font-bold text-purple-600">{user.learningRhythm.preferredBreakInterval} min</div>
+                <div className="text-xs text-gray-600 mt-1">Break Interval</div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Analytics Dashboard */}
         <AnalyticsDashboard userId={user?.id} analytics={analytics} />

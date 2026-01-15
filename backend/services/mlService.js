@@ -79,6 +79,145 @@ class MLService {
     }
   }
 
+  // AI Adaptive Features (Feature #6 - Performance Prediction)
+  static async predictPerformance(userId, interactionHistory) {
+    try {
+      const response = await axios.post(`${ML_API_URL}/api/ml/predict-performance`, {
+        userId,
+        interactionHistory
+      }, { timeout: 5000 });
+      
+      return response.data;
+    } catch (error) {
+      console.error('ML Performance Prediction error:', error.message);
+      return { 
+        success: false, 
+        predictedScore: 70, 
+        confidence: 0.3,
+        recommendations: ['Complete more lessons for accurate predictions']
+      };
+    }
+  }
+
+  // AI Adaptive Features (Feature #2 - Struggle Detection)
+  static async detectStruggle(currentSession, interactionHistory) {
+    try {
+      const response = await axios.post(`${ML_API_URL}/api/ml/detect-struggle`, {
+        currentSession,
+        interactionHistory
+      }, { timeout: 5000 });
+      
+      return response.data;
+    } catch (error) {
+      console.error('ML Struggle Detection error:', error.message);
+      return { 
+        success: false, 
+        isStruggling: false,
+        suggestedInterventions: []
+      };
+    }
+  }
+
+  // AI Adaptive Features (Feature #5 - Optimal Break Time)
+  static async getOptimalBreakTime(sessionData, userRhythm) {
+    try {
+      const response = await axios.post(`${ML_API_URL}/api/ml/optimal-break`, {
+        sessionData,
+        userRhythm
+      }, { timeout: 5000 });
+      
+      return response.data;
+    } catch (error) {
+      console.error('ML Optimal Break error:', error.message);
+      const duration = sessionData.duration / 60 || 0;
+      return { 
+        success: false, 
+        needsBreak: duration > 25,
+        message: duration > 25 ? 'Consider taking a break' : 'Keep going!',
+        suggestedDuration: 5
+      };
+    }
+  }
+
+  // AI Adaptive Features (Feature #7 - Neurodiversity Detection)
+  static async detectNeurodiversityPatterns(interactionHistory) {
+    try {
+      const response = await axios.post(`${ML_API_URL}/api/ml/detect-neurodiversity`, {
+        interactionHistory
+      }, { timeout: 5000 });
+      
+      return response.data;
+    } catch (error) {
+      console.error('ML Neurodiversity Detection error:', error.message);
+      return { 
+        success: false, 
+        detectedPatterns: [],
+        confidence: 0.0,
+        adaptiveRecommendations: []
+      };
+    }
+  }
+
+  // AI Adaptive Features (Feature #11 - Skill Mastery)
+  static async updateSkillMastery(currentMastery, interaction) {
+    try {
+      const response = await axios.post(`${ML_API_URL}/api/ml/update-skill-mastery`, {
+        currentMastery,
+        interaction
+      }, { timeout: 5000 });
+      
+      return response.data;
+    } catch (error) {
+      console.error('ML Skill Mastery error:', error.message);
+      return { 
+        success: false, 
+        updatedMastery: currentMastery,
+        recommendations: []
+      };
+    }
+  }
+
+  // AI Adaptive Features (Feature #5 - Adaptive UI)
+  static async getAdaptiveUISettings(behaviorPatterns, currentSettings) {
+    try {
+      const response = await axios.post(`${ML_API_URL}/api/ml/adaptive-ui-settings`, {
+        behaviorPatterns,
+        currentSettings
+      }, { timeout: 5000 });
+      
+      return response.data;
+    } catch (error) {
+      console.error('ML Adaptive UI error:', error.message);
+      return { 
+        success: false, 
+        suggestions: {},
+        autoApply: false
+      };
+    }
+  }
+
+  // AI Adaptive Features (Feature #12 - Gamification Preferences)
+  static async analyzeGamificationPreferences(interactionHistory) {
+    try {
+      const response = await axios.post(`${ML_API_URL}/api/ml/gamification-preferences`, {
+        interactionHistory
+      }, { timeout: 5000 });
+      
+      return response.data;
+    } catch (error) {
+      console.error('ML Gamification Preferences error:', error.message);
+      return { 
+        success: false, 
+        preferences: {
+          respondsToAchievements: true,
+          respondsToPoints: true,
+          respondsToLeaderboards: false
+        },
+        recommendations: []
+      };
+    }
+  }
+
   // Fallback methods when ML service is unavailable
 
   static getFallbackRecommendations(userProfile) {

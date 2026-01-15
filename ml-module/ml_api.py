@@ -17,13 +17,20 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 try:
     from src.preprocessor import FeatureExtractor
     from src.recommender import ContentRecommender
+    from src.predictor import PerformancePredictor, SkillMasteryTracker
 except ImportError:
     print("Warning: Could not import custom modules. Using fallback mode.")
     FeatureExtractor = None
     ContentRecommender = None
+    PerformancePredictor = None
+    SkillMasteryTracker = None
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
+
+# Initialize AI modules
+predictor = PerformancePredictor() if PerformancePredictor else None
+skill_tracker = SkillMasteryTracker() if SkillMasteryTracker else None
 
 # Load models (if they exist)
 models_dir = os.path.join(os.path.dirname(__file__), 'models')
@@ -292,6 +299,301 @@ def learning_insights():
             'success': True,
             'insights': insights,
             'timestamp': datetime.now().isoformat()
+        })
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/ml/predict-performance', methods=['POST'])
+def predict_performance():
+    """
+    Predict future performance based on interaction history (Feature #6)
+    
+    Expected payload:
+    {
+        "userId": "string",
+        "interactionHistory": [...]
+    }
+    """
+    try:
+        data = request.get_json()
+        interaction_history = data.get('interactionHistory', [])
+        
+        if predictor:
+            result = predictor.predict_performance(interaction_history)
+        else:
+            # Fallback prediction
+            if interaction_history:
+                scores = [i.get('performance', {}).get('score', 0) for i in interaction_history]
+                avg_score = sum(scores) / len(scores) if scores else 70
+                result = {
+                    'predictedScore': avg_score,
+                    'confidence': 0.5,
+                    'trend': 'stable',
+                    'recommendations': ['Continue practicing regularly']
+                }
+            else:
+                result = {
+                    'predictedScore': 70,
+                    'confidence': 0.3,
+                    'trend': 'stable',
+                    'recommendations': ['Complete more lessons for better predictions']
+                }
+        
+        return jsonify({
+            'success': True,
+            **result
+        })
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/ml/detect-struggle', methods=['POST'])
+def detect_struggle():
+    """
+    Detect if student is struggling in real-time (Feature #2)
+    
+    Expected payload:
+    {
+        "currentSession": {...},
+        "interactionHistory": [...]
+    }
+    """
+    try:
+        data = request.get_json()
+        current_session = data.get('currentSession', {})
+        interaction_history = data.get('interactionHistory', [])
+        
+        if predictor:
+            result = predictor.detect_struggle(current_session, interaction_history)
+        else:
+            # Simple fallback
+            pause_freq = current_session.get('behaviorMetrics', {}).get('pauseFrequency', 0)
+            result = {
+                'isStruggling': pause_freq > 5,
+                'struggleLevel': 'moderate' if pause_freq > 5 else 'low',
+                'suggestedInterventions': ['Take a short break'] if pause_freq > 5 else []
+            }
+        
+        return jsonify({
+            'success': True,
+            **result
+        })
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/ml/optimal-break', methods=['POST'])
+def optimal_break_time():
+    """
+    Calculate optimal break time based on fatigue (Feature #5)
+    
+    Expected payload:
+    {
+        "sessionData": {...},
+        "userRhythm": {...}
+    }
+    """
+    try:
+        data = request.get_json()
+        session_data = data.get('sessionData', {})
+        user_rhythm = data.get('userRhythm', {})
+        
+        if predictor:
+            result = predictor.calculate_optimal_break_time(session_data, user_rhythm)
+        else:
+            # Simple fallback
+            duration = session_data.get('duration', 0) / 60
+            needs_break = duration > 25
+            result = {
+                'needsBreak': needs_break,
+                'message': 'Take a 5-minute break' if needs_break else 'Keep going!',
+                'suggestedDuration': 5
+            }
+        
+        return jsonify({
+            'success': True,
+            **result
+        })
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/ml/detect-neurodiversity', methods=['POST'])
+def detect_neurodiversity_patterns():
+    """
+    Detect neurodiversity patterns from behavior (Feature #7)
+    
+    Expected payload:
+    {
+        "interactionHistory": [...]
+    }
+    """
+    try:
+        data = request.get_json()
+        interaction_history = data.get('interactionHistory', [])
+        
+        if predictor:
+            result = predictor.detect_neurodiversity_patterns(interaction_history)
+        else:
+            result = {
+                'detectedPatterns': [],
+                'confidence': 0.0,
+                'needsMoreData': True,
+                'adaptiveRecommendations': []
+            }
+        
+        return jsonify({
+            'success': True,
+            **result
+        })
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/ml/update-skill-mastery', methods=['POST'])
+def update_skill_mastery():
+    """
+    Update skill mastery levels (Feature #11)
+    
+    Expected payload:
+    {
+        "currentMastery": {...},
+        "interaction": {...}
+    }
+    """
+    try:
+        data = request.get_json()
+        current_mastery = data.get('currentMastery', {})
+        interaction = data.get('interaction', {})
+        
+        if skill_tracker:
+            updated_mastery = skill_tracker.update_skill_mastery(current_mastery, interaction)
+            recommendations = skill_tracker.get_skill_recommendations(updated_mastery)
+        else:
+            updated_mastery = current_mastery
+            recommendations = []
+        
+        return jsonify({
+            'success': True,
+            'updatedMastery': updated_mastery,
+            'recommendations': recommendations
+        })
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/ml/adaptive-ui-settings', methods=['POST'])
+def adaptive_ui_settings():
+    """
+    Get adaptive UI settings based on user behavior (Feature #5)
+    
+    Expected payload:
+    {
+        "behaviorPatterns": {...},
+        "currentSettings": {...}
+    }
+    """
+    try:
+        data = request.get_json()
+        behavior = data.get('behaviorPatterns', {})
+        current_settings = data.get('currentSettings', {})
+        
+        suggestions = {}
+        
+        # Auto-adjust font size if user zooms frequently
+        if behavior.get('zoomFrequency', 0) > 3:
+            suggestions['fontSize'] = 'large'
+        
+        # Switch to dark mode for long sessions
+        session_duration = behavior.get('averageSessionDuration', 0)
+        if session_duration > 30 and current_settings.get('colorScheme') == 'light':
+            suggestions['colorScheme'] = 'dark'
+            suggestions['reason'] = 'Reduce eye strain during long sessions'
+        
+        # Enable text-to-speech if reading speed is low
+        if behavior.get('averageReadingSpeed', 200) < 150:
+            suggestions['textToSpeech'] = True
+            suggestions['reason'] = 'Assist with content consumption'
+        
+        # Reduce animations for ADHD patterns
+        if behavior.get('tabSwitchFrequency', 0) > 5:
+            suggestions['reducedAnimations'] = True
+            suggestions['focusMode'] = True
+            suggestions['reason'] = 'Minimize distractions'
+        
+        return jsonify({
+            'success': True,
+            'suggestions': suggestions,
+            'autoApply': False  # Let user decide
+        })
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/ml/gamification-preferences', methods=['POST'])
+def analyze_gamification_preferences():
+    """
+    Analyze gamification preferences (Feature #12)
+    
+    Expected payload:
+    {
+        "interactionHistory": [...]
+    }
+    """
+    try:
+        data = request.get_json()
+        interactions = data.get('interactionHistory', [])
+        
+        # Analyze which gamification elements user interacts with
+        badge_clicks = sum(1 for i in interactions if 'badge' in str(i.get('action', '')))
+        points_views = sum(1 for i in interactions if 'points' in str(i.get('action', '')))
+        leaderboard_views = sum(1 for i in interactions if 'leaderboard' in str(i.get('action', '')))
+        
+        total_gamification = badge_clicks + points_views + leaderboard_views
+        
+        preferences = {
+            'respondsToAchievements': badge_clicks > 2,
+            'respondsToPoints': points_views > 2,
+            'respondsToLeaderboards': leaderboard_views > 1,
+            'engagementScore': min(1.0, total_gamification / 10),
+            'preferredRewardType': 'badges' if badge_clicks > max(points_views, leaderboard_views) else 'points'
+        }
+        
+        # Recommendations
+        recommendations = []
+        if preferences['engagementScore'] < 0.3:
+            recommendations.append('User shows low engagement with gamification - consider hiding some elements')
+        if preferences['respondsToLeaderboards']:
+            recommendations.append('Show competitive challenges')
+        if preferences['respondsToAchievements']:
+            recommendations.append('Highlight achievement progress prominently')
+        
+        return jsonify({
+            'success': True,
+            'preferences': preferences,
+            'recommendations': recommendations
         })
     
     except Exception as e:

@@ -48,6 +48,7 @@ export const interactionAPI = {
   log: (data) => api.post('/interactions/log', data),
   getUserInteractions: (userId, params) => api.get(`/interactions/user/${userId}`, { params }),
   getAnalytics: (userId) => api.get(`/interactions/analytics/${userId}`),
+  getHistory: (userId, limit = 50) => api.get(`/interactions/user/${userId}`, { params: { limit } }),
 };
 
 export default api;

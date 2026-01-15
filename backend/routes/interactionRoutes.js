@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Interaction = require('../models/Interaction');
+const mongoose = require('mongoose');
 
 // @route   POST /api/interactions/log
 // @desc    Log user interaction (Week 4 feature)
@@ -54,9 +55,14 @@ router.get('/analytics/:userId', async (req, res) => {
   try {
     const userId = req.params.userId;
 
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' });
+    }
+
     // Aggregate interaction data
     const analytics = await Interaction.aggregate([
-      { $match: { userId: require('mongoose').Types.ObjectId(userId) } },
+      { $match: { userId: new mongoose.Types.ObjectId(userId) } },
       {
         $group: {
           _id: '$interactionType',
@@ -70,7 +76,7 @@ router.get('/analytics/:userId', async (req, res) => {
 
     // Get recent emotional states
     const emotionalTrends = await Interaction.aggregate([
-      { $match: { userId: require('mongoose').Types.ObjectId(userId) } },
+      { $match: { userId: new mongoose.Types.ObjectId(userId) } },
       { $sort: { timestamp: -1 } },
       { $limit: 20 },
       {
@@ -83,8 +89,8 @@ router.get('/analytics/:userId', async (req, res) => {
 
     res.json({
       success: true,
-      analytics,
-      emotionalTrends
+      analytics: analytics || [],
+      emotionalTrends: emotionalTrends || []
     });
   } catch (error) {
     console.error('Analytics error:', error);

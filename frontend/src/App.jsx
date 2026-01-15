@@ -15,7 +15,12 @@ import { AccessibilityProvider } from './context/AccessibilityContext';
 function App() {
   return (
     <ErrorBoundary>
-      <Router>
+      <Router
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true
+        }}
+      >
         <UserProvider>
           <AccessibilityProvider>
             <div className="min-h-screen bg-gray-50">

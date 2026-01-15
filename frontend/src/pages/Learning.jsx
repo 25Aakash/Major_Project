@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import { contentAPI, learningAPI, interactionAPI } from '../services/api';
-import { FaBook, FaFilter, FaPlay, FaVideo } from 'react-icons/fa';
+import { FaBook, FaFilter, FaPlay, FaVideo, FaCoffee, FaLightbulb, FaBolt } from 'react-icons/fa';
 import VideoPlayer from '../components/VideoPlayer';
 import LessonViewer from '../components/LessonViewer';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import axios from 'axios';
 
 const Learning = () => {
   const { user, isAuthenticated } = useUser();
@@ -18,6 +19,16 @@ const Learning = () => {
   const [isVideoOpen, setIsVideoOpen] = useState(false);
   const [selectedLesson, setSelectedLesson] = useState(null);
   const [isLessonOpen, setIsLessonOpen] = useState(false);
+  
+  // AI Adaptive Features - Real-time tracking (Feature #1)
+  const [sessionData, setSessionData] = useState({
+    startTime: Date.now(),
+    duration: 0,
+    interactions: 0,
+    focusLevel: 8
+  });
+  const [intervention, setIntervention] = useState(null);
+  const sessionRef = useRef(Date.now().toString());
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -48,17 +59,68 @@ const Learning = () => {
       const lesson = content.find(c => c._id === contentId);
       setSelectedLesson(lesson);
       setIsLessonOpen(true);
+      
+      // Track interaction
+      setSessionData(prev => ({ ...prev, interactions: prev.interactions + 1 }));
 
-      // Log interaction
+      // Log interaction with behavioral data
       await interactionAPI.log({
         userId: user.id,
-        sessionId: Date.now().toString(),
+        sessionId: sessionRef.current,
         contentId,
         interactionType: 'view',
+        focusLevel: sessionData.focusLevel,
+        behaviorMetrics: {
+          mouseMovements: sessionData.interactions,
+          idleTime: 0
+        },
+        sessionMetrics: {
+          startTime: new Date(sessionData.startTime)
+        },
         timestamp: new Date()
       });
     } catch (error) {
       console.error('Error starting lesson:', error);
+    }
+  };
+  
+  // Handle video tracking data (Feature #1)
+  const handleVideoTracking = async (trackingData) => {
+    try {
+      if (!selectedLesson) return;
+      
+      await interactionAPI.log({
+        userId: user.id,
+        sessionId: sessionRef.current,
+        contentId: selectedLesson._id,
+        interactionType: 'pause',
+        mediaMetrics: {
+          pausePoints: trackingData.pausePoints,
+          rewindCount: trackingData.rewindCount,
+          fastForwardCount: trackingData.fastForwardCount,
+          playbackSpeedChanges: trackingData.playbackSpeedChanges,
+          seekCount: trackingData.seekCount,
+          averagePlaybackSpeed: trackingData.averagePlaybackSpeed
+        },
+        attentionMetrics: {
+          attentionSpan: trackingData.totalDuration / 60,
+          comprehensionSignals: {
+            repeatViews: trackingData.rewindCount,
+            confusionPatterns: trackingData.pausePoints.length > 5 ? 1 : 0
+          }
+        },
+        timestamp: new Date()
+      });
+      
+      // Check if struggling based on video metrics (Feature #2)
+      if (trackingData.rewindCount > 3 || trackingData.pausePoints.length > 5) {
+        toast.warning('💡 Having trouble? Try switching to a different format!', {
+          position: 'top-center',
+          autoClose: 4000
+        });
+      }
+    } catch (error) {
+      console.error('Video tracking error:', error);
     }
   };
 
@@ -103,6 +165,49 @@ const Learning = () => {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">Learning Center</h1>
+        
+        {/* AI Intervention Notification */}
+        {intervention && (
+          <div className={`mb-6 p-4 rounded-lg border-l-4 ${
+            intervention.priority === 'high' ? 'bg-red-50 border-red-500' : 'bg-blue-50 border-blue-500'
+          }`}>
+            <div className="flex items-start justify-between">
+              <div className="flex items-center">
+                {intervention.type === 'break' ? <FaCoffee className="text-2xl mr-3 text-blue-600" /> : <FaLightbulb className="text-2xl mr-3 text-yellow-600" />}
+                <div>
+                  <h3 className="font-bold text-lg">{intervention.message}</h3>
+                  {intervention.suggestions && (
+                    <ul className="mt-2 text-sm text-gray-700">
+                      {intervention.suggestions.slice(0, 2).map((suggestion, idx) => (
+                        <li key={idx} className="flex items-center mt-1">
+                          <FaBolt className="mr-2 text-yellow-500" />
+                          {suggestion}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setIntervention(null)}
+                  className="px-4 py-2 bg-white border rounded-lg hover:bg-gray-50"
+                >
+                  Later
+                </button>
+                <button
+                  onClick={() => {
+                    toast.success('Great choice! 🎯');
+                    setIntervention(null);
+                  }}
+                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                >
+                  {intervention.type === 'break' ? 'Take Break' : 'Show Me'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Adaptive Learning Path */}
         {adaptivePath && (
@@ -209,12 +314,13 @@ const Learning = () => {
         {/* Toast Container */}
         <ToastContainer />
 
-        {/* Video Player Modal */}
+        {/* Video Player Modal with Tracking */}
         <VideoPlayer
           isOpen={isVideoOpen}
           onClose={() => setIsVideoOpen(false)}
           videoSrc="/public/demo-video.mp4"
           title="Learning Content Demo Video"
+          onTrackingUpdate={handleVideoTracking}
         />
       </div>
     </div>

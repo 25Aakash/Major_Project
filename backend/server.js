@@ -17,10 +17,7 @@ app.use(morgan('dev'));
 // Database Connection
 const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/neurolearn', {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/neurolearn');
     console.log('✅ MongoDB Connected Successfully');
   } catch (error) {
     console.error('❌ MongoDB Connection Error:', error.message);
@@ -35,6 +32,7 @@ app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/learning', require('./routes/learningRoutes'));
 app.use('/api/interactions', require('./routes/interactionRoutes'));
 app.use('/api/content', require('./routes/contentRoutes'));
+app.use('/api/interventions', require('./routes/interventionRoutes'));
 
 // Health Check
 app.get('/api/health', (req, res) => {
